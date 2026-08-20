@@ -1,6 +1,6 @@
 --[[
 ==================================================================================================
-   SWIFT UI LIBRARY  ·  v2.5  (polished)
+   SWIFT UI LIBRARY  ·  v2.6  (IMGUI-polished)
    A fully self-contained, loadstring-able Roblox UI library.
    Pixel-faithful recreation of the SWIFT menu mockup, generalised into a component library.
    v2.5: refined palette, larger radii, circular slider thumb, softer shadows,
@@ -36,7 +36,7 @@
 
 local SWIFT = {}
 SWIFT.__index = SWIFT
-SWIFT.Version = "2.5.0"
+SWIFT.Version = "2.6.0"
 SWIFT.Flags   = {}
 SWIFT.Windows = {}
 
@@ -630,16 +630,15 @@ function SWIFT:CreateWindow(cfg)
                 Position = cfg.Position or UDim2.fromScale(0.5, 0.5),
                 ClipsDescendants = true, GroupTransparency = 0, ZIndex = 5,
         }, screen)
-        -- v2.5: soft drop shadow sitting behind the shell for depth over any game scene.
-        -- Built as a sibling ImageLabel (a blurred rounded rect) so it never clips the shell.
+        -- IMGUI: tight, subtle shell shadow
         local shadow = inst("ImageLabel", {
                 Name = "shellShadow", BackgroundTransparency = 1, ZIndex = 4,
-                Image = "rbxassetid://1316045217",            -- soft radial blur sprite
+                Image = "rbxassetid://1316045217",
                 ImageColor3 = Color3.fromRGB(0, 0, 0),
-                ImageTransparency = 0.35,
+                ImageTransparency = 0.5,
                 ScaleType = Enum.ScaleType.Slice,
                 SliceCenter = Rect.new(10, 10, 118, 118),
-                Size = UDim2.new(1, 18, 1, 18),
+                Size = UDim2.new(1, 10, 1, 10),
                 AnchorPoint = Vector2.new(0.5, 0.5),
                 Position = UDim2.fromScale(0.5, 0.5),
                 Visible = false,
@@ -685,7 +684,7 @@ function SWIFT:CreateWindow(cfg)
         --============================================================================================
         local headerH = cfg.HeaderHeight or 32                 -- v2.5: slightly taller header (was 29)
         local header = inst("Frame", { Name = "header", Size = UDim2.new(1, 0, 0, headerH),
-                BackgroundTransparency = 1, ZIndex = 4 }, scaler)
+                BackgroundTransparency = 1, ZIndex = 4, ClipsDescendants = true }, scaler)
         local headerStroke = inst("UIStroke", { Color = theme.HeaderBorder, Thickness = 1,
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, header)
         self.Header = header
@@ -703,7 +702,7 @@ function SWIFT:CreateWindow(cfg)
                         local artW = cfg.HeaderImageWidth       -- nil = span the whole bar
                         local art = inst("ImageLabel", {
                                 Name = "headerArt", BackgroundTransparency = 1, ZIndex = 1, Active = false,
-                                Size = artW and UDim2.fromOffset(artW, headerH + 2) or UDim2.new(1, 0, 0, headerH + 2),
+                                Size = artW and UDim2.fromOffset(artW, headerH) or UDim2.new(1, 0, 0, headerH),
                                 Position = UDim2.fromOffset(0, 0),
                                 Image = img, ScaleType = Enum.ScaleType.Crop,     -- center / cover
                                 ImageColor3 = cfg.HeaderImageTint or Color3.fromRGB(150, 150, 158),
@@ -939,7 +938,7 @@ function SWIFT:CreateWindow(cfg)
                         self.ShellShadow.Visible = true
                         self.ShellShadow.ImageTransparency = 1
                         TweenService:Create(self.ShellShadow, TweenInfo.new(0.6, Enum.EasingStyle.Cubic, Enum.EasingDirection.Out),
-                                { ImageTransparency = 0.35 }):Play()
+                                { ImageTransparency = 0.5 }):Play()
                 end
                 self._bias = 0.944
                 self:_render()
@@ -947,7 +946,7 @@ function SWIFT:CreateWindow(cfg)
         else
                 if self.ShellShadow then
                         self.ShellShadow.Visible = true
-                        self.ShellShadow.ImageTransparency = 0.35
+                        self.ShellShadow.ImageTransparency = 0.5
                 end
         end
 
@@ -1125,7 +1124,7 @@ function Window:Toggle(state)
         -- v2.5: fade the shadow in/out with the shell
         if self.ShellShadow then
                 TweenService:Create(self.ShellShadow, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        { ImageTransparency = state and 1 or 0.35 }):Play()
+                        { ImageTransparency = state and 1 or 0.5 }):Play()
         end
         self:_animateBias(state and 0.94 or 1, 0.22)
         self.Shell.Active = not state
@@ -1296,9 +1295,10 @@ end
 
 function Window:_backdropFor()
         self:CloseOverlays()
+        -- IMGUI: invisible click-catcher, no visible overlay or dimming
         self._backdrop = inst("TextButton", { Name = "swift_backdrop", Text = "",
                 BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.fromScale(1, 1),
-                ZIndex = 8 }, self.ScreenGui)
+                ZIndex = 7 }, self.ScreenGui)
         self._backdrop.Activated:Connect(function() self:CloseOverlays() end)
         return self._backdrop
 end
@@ -1307,21 +1307,21 @@ end
 function Window:_menuPanel(button, rowCount, onClosed)
         local S, T = self.S, self.Theme
         local vp = getViewport()
-        local ROW_H, PAD = 19, 5                  -- v2.5: 17→19px rows, 4→5px padding
-        local w = math.max(74 * S, button.AbsoluteSize.X)   -- v2.5: 70→74 min width
+        local ROW_H, PAD = 17, 4                  -- IMGUI: compact 17px rows, 4px padding
+        local w = math.max(70 * S, button.AbsoluteSize.X)   -- IMGUI: 70px min width
         local h = rowCount * ROW_H + PAD * 2
 
-        -- v2.5: soft shadow behind the dropdown for depth
+        -- IMGUI: tight, subtle shadow behind dropdown
         local shadow = inst("ImageLabel", { Name = "swift_overlay_shadow", BackgroundTransparency = 1, ZIndex = 8,
                 Image = "rbxassetid://1316045217", ScaleType = Enum.ScaleType.Slice,
                 SliceCenter = Rect.new(10, 10, 118, 118),
-                ImageColor3 = Color3.fromRGB(0, 0, 0), ImageTransparency = 0.5,
-                Size = UDim2.new(1, 14, 1, 14), AnchorPoint = Vector2.new(0.5, 0.5),
-                Position = UDim2.fromScale(0.5, 0.5) }, self.ScreenGui)
+                ImageColor3 = Color3.fromRGB(0, 0, 0), ImageTransparency = 0.65,
+                Size = UDim2.fromOffset(w + 8, 0), AnchorPoint = Vector2.new(0, 0),
+                Position = UDim2.fromOffset(left - 4, top - 4) }, self.ScreenGui)
 
         local d = inst("Frame", { Name = "swift_overlay", BackgroundColor3 = T.DropdownBg, ZIndex = 9,
                 Size = UDim2.fromOffset(w, h), BorderSizePixel = 0, ClipsDescendants = true }, self.ScreenGui)
-        inst("UICorner", { CornerRadius = UDim.new(0, 5) }, d)            -- v2.5: 3→5 radius
+        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, d)            -- IMGUI: tight 3px radius
         inst("UIStroke", { Color = T.DropdownBorder, Thickness = 1,
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, d)
         local list = inst("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, d)
@@ -1336,21 +1336,21 @@ function Window:_menuPanel(button, rowCount, onClosed)
         local flip = (below + h > vp.Y - 8)
         local top  = flip and math.max(8, br.Y - h - gap) or below
         d.Position = UDim2.fromOffset(left, top)
-        if shadow then shadow.Position = UDim2.fromOffset(left, top) end
+        if shadow then shadow.Position = UDim2.fromOffset(left - 4, top - 4) end
 
         d.Size = UDim2.fromOffset(w, 0)
-        shadow.Size = UDim2.new(0, w + 14, 0, 0)           -- v2.5: grow the shadow with the panel
-        TweenService:Create(d, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+        shadow.Size = UDim2.fromOffset(w + 8, 0)
+        TweenService:Create(d, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
                 { Size = UDim2.fromOffset(w, h) }):Play()
-        TweenService:Create(shadow, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-                { Size = UDim2.new(0, w + 14, 0, h + 14) }):Play()
+        TweenService:Create(shadow, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                { Size = UDim2.fromOffset(w + 8, h + 8) }):Play()
         if flip then
                 d.Position = UDim2.fromOffset(left, br.Y - gap)
-                if shadow then shadow.Position = UDim2.fromOffset(left, br.Y - gap) end
-                TweenService:Create(d, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                if shadow then shadow.Position = UDim2.fromOffset(left - 4, br.Y - gap - 4) end
+                TweenService:Create(d, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
                         { Position = UDim2.fromOffset(left, top) }):Play()
-                TweenService:Create(shadow, TweenInfo.new(0.16, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-                        { Position = UDim2.fromOffset(left, top) }):Play()
+                TweenService:Create(shadow, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
+                        { Position = UDim2.fromOffset(left - 4, top - 4) }):Play()
         end
         self._onOverlayClosed = onClosed
         return d, list, ROW_H
@@ -1369,30 +1369,30 @@ function Window:_menuItem(list, i, text, rowH, selected, onClick)
         local item = inst("TextButton", { Text = "", BackgroundColor3 = T.MenuHover,
                 BackgroundTransparency = 1, AutoButtonColor = false, BorderSizePixel = 0,
                 Size = UDim2.new(1, 0, 0, rowH), LayoutOrder = i }, list)
-        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, item)            -- v2.5: 2→3 radius
+        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, item)            -- IMGUI: 2px radius
 
-        local barH = math.max(7, rowH - 6)
+        local barH = math.max(6, rowH - 6)
         local bar = inst("Frame", { Name = "bar", BackgroundColor3 = self.Accent, BorderSizePixel = 0,
-                AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 4, 0.5, 0),    -- v2.5: 3→4px
+                AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 3, 0.5, 0),
                 Size = UDim2.fromOffset(2, selected and barH or 0),
                 BackgroundTransparency = selected and 0 or 1, Visible = selected ~= nil }, item)
         inst("UICorner", { CornerRadius = UDim.new(0, 1) }, bar)
 
         local label = inst("TextLabel", { BackgroundTransparency = 1, Font = self.Font, Text = text,
-                TextColor3 = selected and self.Accent or T.MenuText, TextSize = 8,           -- v2.5: 7→8pt
+                TextColor3 = selected and self.Accent or T.MenuText, TextSize = 7,           -- IMGUI: 7pt
                 TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
-                Position = UDim2.fromOffset(11, 0), Size = UDim2.new(1, -15, 1, 0) }, item)  -- v2.5: 10→11px
+                Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -14, 1, 0) }, item)
 
         local isOn, hovering = selected == true, false
         local function paint(fast)
-                local ti = TweenInfo.new(fast and 0.1 or 0.14)
+                local ti = TweenInfo.new(fast and 0.08 or 0.1)
                 local col = hovering and T.MenuTextHover or (isOn and self.Accent or T.MenuText)
                 TweenService:Create(label, ti, { TextColor3 = col }):Play()
                 TweenService:Create(item, ti,
-                        { BackgroundTransparency = hovering and 0.93 or 1 }):Play()
+                        { BackgroundTransparency = hovering and 0.92 or 1 }):Play()
                 if selected ~= nil then
                         bar.BackgroundColor3 = self.Accent
-                        TweenService:Create(bar, TweenInfo.new(fast and 0.12 or 0.16, Enum.EasingStyle.Back,
+                        TweenService:Create(bar, TweenInfo.new(fast and 0.08 or 0.12, Enum.EasingStyle.Quad,
                                 Enum.EasingDirection.Out), {
                                         Size = UDim2.fromOffset(2, isOn and barH or 0),
                                         BackgroundTransparency = isOn and 0 or 1 }):Play()
@@ -1408,8 +1408,8 @@ function Window:_menuItem(list, i, text, rowH, selected, onClick)
 
         item.Activated:Connect(function() onClick(handle, label) end)
         label.TextTransparency = 1
-        TweenService:Create(label, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,
-                0, false, i * 0.018), { TextTransparency = 0 }):Play()
+        TweenService:Create(label, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out,
+                0, false, i * 0.012), { TextTransparency = 0 }):Play()
         return item, label, handle
 end
 
@@ -1898,12 +1898,12 @@ function Card:_row(height)
         local W, T = self.Window, self.Window.Theme
         local f = inst("Frame", { BackgroundColor3 = T.Row, Size = UDim2.new(1, 0, 0, height),
                 LayoutOrder = self:_next() }, self.Scroll)
-        inst("UICorner", { CornerRadius = UDim.new(0, 4) }, f)       -- v2.5: slightly rounder rows (was 3)
+        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, f)       -- IMGUI: tight 3px radius
         f.MouseEnter:Connect(function()
-                TweenService:Create(f, TweenInfo.new(0.14), { BackgroundColor3 = W.Theme.RowHover }):Play()
+                TweenService:Create(f, TweenInfo.new(0.1), { BackgroundColor3 = W.Theme.RowHover }):Play()
         end)
         f.MouseLeave:Connect(function()
-                TweenService:Create(f, TweenInfo.new(0.2), { BackgroundColor3 = W.Theme.Row }):Play()
+                TweenService:Create(f, TweenInfo.new(0.12), { BackgroundColor3 = W.Theme.Row }):Play()
         end)
         W:_onTheme(function(t) f.BackgroundColor3 = t.Row end)
         return f
@@ -1924,8 +1924,8 @@ function Card:_pill(parent, width)
         local W, T = self.Window, self.Window.Theme
         local btn = inst("TextButton", { Text = "", BackgroundColor3 = T.Control, AutoButtonColor = false,
                 AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0),
-                Size = UDim2.fromOffset(width, 16), ClipsDescendants = true }, parent)   -- v2.5: 14→16px tall
-        inst("UICorner", { CornerRadius = UDim.new(0, 4) }, btn)                       -- v2.5: 3→4 radius
+                Size = UDim2.fromOffset(width, 15), ClipsDescendants = true }, parent)   -- IMGUI: 15px tall
+        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, btn)                       -- IMGUI: 3px radius
         local stroke = inst("UIStroke", { Color = T.ControlBorder, Thickness = 1,
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, btn)
         btn.MouseEnter:Connect(function()
@@ -1972,35 +1972,31 @@ end
 function Card:AddToggle(cfg)
         cfg = cfg or {}
         local W, T = self.Window, self.Window.Theme
-        local r = self:_row(27)                  -- v2.5: 25→27px for more breathing room
+        local r = self:_row(24)                  -- IMGUI: compact 24px row
         local state = cfg.Default == true
 
-        -- WHITE base: a UIGradient multiplies with BackgroundColor3
-        local box = inst("Frame", { BackgroundColor3 = WHITE, AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(14, 14) }, r)  -- v2.5: 12→14px
-        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, box)                            -- v2.5: 2→3 radius
-        local grad = inst("UIGradient", { Rotation = 135,
-                Color = state and ColorSequence.new(T.AccentDark, W.Accent)
-                              or ColorSequence.new(T.ToggleOff, T.ToggleOff) }, box)
-        -- v2.5: subtle inner highlight for a soft "lit" feel when on
-        local sheen = inst("ImageLabel", { BackgroundTransparency = 1, ZIndex = 2,
-                Size = UDim2.fromScale(1, 0.5), Position = UDim2.fromOffset(0, 0),
-                Image = "rbxassetid://1316045217", ScaleType = Enum.ScaleType.Slice,
-                SliceCenter = Rect.new(10, 10, 118, 118),
-                ImageColor3 = WHITE, ImageTransparency = state and 0.55 or 0.8 }, box)
-        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, sheen)
-        local check = inst("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromOffset(11, 11),
+        -- IMGUI-style checkbox: flat, minimal, no gradient/sheen
+        local boxSize = 13
+        local box = inst("Frame", {
+                BackgroundColor3 = state and W.Accent or T.ToggleOff,
+                AnchorPoint = Vector2.new(1, 0.5),
+                Position = UDim2.new(1, -6, 0.5, 0),
+                Size = UDim2.fromOffset(boxSize, boxSize),
+                BorderSizePixel = 1,
+                BorderColor3 = state and W.Accent or T.ControlBorder,
+        }, r)
+        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, box)  -- IMGUI: subtle 2px radius
+        local check = inst("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromOffset(8, 8),
                 Image = resolveIcon("lucide-check"), ImageColor3 = WHITE, ScaleType = Enum.ScaleType.Fit,
                 AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
                 ImageTransparency = state and 0 or 1, ZIndex = 3 }, box)
-        local bScale = inst("UIScale", { Scale = 1 }, box)
-        local cScale = inst("UIScale", { Scale = state and 1 or 0.55 }, check)
-        self:_label(r, cfg.Name or "Toggle", 28)
+        local cScale = inst("UIScale", { Scale = state and 1 or 0.6 }, check)
+        self:_label(r, cfg.Name or "Toggle", 26)
 
         local setFlag = self:_flag(cfg, function() return state end)
         local function paint()
-                grad.Color = state and ColorSequence.new(W.Theme.AccentDark, W.Accent)
-                                   or ColorSequence.new(W.Theme.ToggleOff, W.Theme.ToggleOff)
+                box.BackgroundColor3 = state and W.Accent or W.Theme.ToggleOff
+                box.BorderColor3 = state and W.Accent or W.Theme.ControlBorder
         end
         W:_onAccent(paint)
         W:_onTheme(paint)
@@ -2009,23 +2005,19 @@ function Card:AddToggle(cfg)
         function api:Set(v, silent)
                 state = v and true or false
                 paint(); setFlag(state)
-                TweenService:Create(check, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                TweenService:Create(check, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                         { ImageTransparency = state and 0 or 1 }):Play()
-                TweenService:Create(cScale, TweenInfo.new(0.18, Enum.EasingStyle.Back,
-                        Enum.EasingDirection.Out), { Scale = state and 1 or 0.55 }):Play()
-                TweenService:Create(sheen, TweenInfo.new(0.16),
-                        { ImageTransparency = state and 0.55 or 0.8 }):Play()
+                TweenService:Create(cScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad,
+                        Enum.EasingDirection.Out), { Scale = state and 1 or 0.6 }):Play()
                 if not silent and cfg.Callback then task.spawn(cfg.Callback, state) end
                 return api
         end
         function api:Get() return state end
         api.Row = r
 
+        -- IMGUI: no bounce animation on click, just clean state toggle
         inst("TextButton", { Text = "", BackgroundTransparency = 1, AutoButtonColor = false,
                 Size = UDim2.fromScale(1, 1) }, r).Activated:Connect(function()
-                        bScale.Scale = 0.84
-                        TweenService:Create(bScale, TweenInfo.new(0.24, Enum.EasingStyle.Back,
-                                Enum.EasingDirection.Out), { Scale = 1 }):Play()
                         api:Set(not state)
                 end)
         if cfg.Default and cfg.Callback then task.spawn(cfg.Callback, state) end
@@ -2045,35 +2037,32 @@ function Card:AddSlider(cfg)
         local unit  = cfg.Suffix or cfg.Unit or ""
         local value = math.clamp(cfg.Default or minV, minV, maxV)
 
-        local r = self:_row(39)                  -- v2.5: 37→39px for a roomier slider
+        local r = self:_row(36)                  -- IMGUI: 36px slider row
         local nameLbl = inst("TextLabel", { BackgroundTransparency = 1, Font = W.Font,
-                Text = cfg.Name or "Slider", TextColor3 = T.RangeLabel, TextSize = 8,   -- v2.5: 7→8pt
-                TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(7, 5),   -- v2.5: 5→7px
+                Text = cfg.Name or "Slider", TextColor3 = T.RangeLabel, TextSize = 8,
+                TextXAlignment = Enum.TextXAlignment.Left, Position = UDim2.fromOffset(7, 4),
                 Size = UDim2.new(1, -54, 0, 9) }, r)
-        local out = inst("TextLabel", { BackgroundTransparency = 1, Font = W.FontMedium,  -- v2.5: medium weight value
-                Text = fmtNumber(minV, dp) .. unit, TextColor3 = T.RangeValue, TextSize = 7,    -- v2.5: 6→7pt
+        local out = inst("TextLabel", { BackgroundTransparency = 1, Font = W.FontMedium,
+                Text = fmtNumber(minV, dp) .. unit, TextColor3 = T.RangeValue, TextSize = 7,
                 TextXAlignment = Enum.TextXAlignment.Right, AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -6, 0, 5), Size = UDim2.fromOffset(48, 9) }, r)
-        -- v2.5: track sits lower and is slightly thicker for a modern look
-        local track = inst("Frame", { BackgroundColor3 = T.TrackEmpty, Position = UDim2.fromOffset(7, 23),
-                Size = UDim2.new(1, -14, 0, 4) }, r)
-        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, track)
-        local fill = inst("Frame", { BackgroundColor3 = WHITE, Size = UDim2.fromScale(0, 1) }, track)
-        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, fill)
-        local fillGrad = inst("UIGradient", {
-                Color = ColorSequence.new(T.AccentDark, W.Accent) }, fill)
-        -- v2.5: circular thumb with a soft glow ring on hover/grab
+                Position = UDim2.new(1, -6, 0, 4), Size = UDim2.fromOffset(48, 9) }, r)
+        -- IMGUI: track positioned for compact layout
+        local track = inst("Frame", { BackgroundColor3 = T.TrackEmpty, Position = UDim2.fromOffset(7, 20),
+                Size = UDim2.new(1, -14, 0, 3) }, r)
+        inst("UICorner", { CornerRadius = UDim.new(0, 1) }, track)  -- IMGUI: 1px radius
+        local fill = inst("Frame", { BackgroundColor3 = W.Accent, Size = UDim2.fromScale(0, 1) }, track)
+        inst("UICorner", { CornerRadius = UDim.new(0, 1) }, fill)
+        -- IMGUI: smaller, solid thumb, no glow ring
         local thumb = inst("Frame", { BackgroundColor3 = T.Thumb, AnchorPoint = Vector2.new(0.5, 0.5),
-                Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(8, 8) }, track)   -- v2.5: 5→8px circle
-        inst("UICorner", { CornerRadius = UDim.new(0.5, 0) }, thumb)                          -- fully round
-        local thumbStroke = inst("UIStroke", { Color = W.Accent, Thickness = 0,
-                Transparency = 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, thumb)      -- glow ring
+                Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(6, 6) }, track)
+        inst("UICorner", { CornerRadius = UDim.new(0.5, 0) }, thumb)
         local thumbScale = inst("UIScale", { Scale = 1 }, thumb)
 
-        W:_onAccent(function(c) fillGrad.Color = ColorSequence.new(W.Theme.AccentDark, c); thumbStroke.Color = c end)
+        W:_onAccent(function(c) fill.BackgroundColor3 = c end)
         W:_onTheme(function(t)
                 nameLbl.TextColor3 = t.RangeLabel; out.TextColor3 = t.RangeValue
                 track.BackgroundColor3 = t.TrackEmpty; thumb.BackgroundColor3 = t.Thumb
+                fill.BackgroundColor3 = W.Accent
         end)
 
         local setFlag = self:_flag(cfg, function() return value end)
@@ -2103,11 +2092,9 @@ function Card:AddSlider(cfg)
         local hovering, grabbing = false, false
         local function refreshThumb()
                 local big = (hovering or grabbing)
-                TweenService:Create(thumbScale, TweenInfo.new(0.15, Enum.EasingStyle.Back,
-                        Enum.EasingDirection.Out), { Scale = big and 1.35 or 1 }):Play()
-                -- v2.5: glow ring fades in on hover/grab
-                TweenService:Create(thumbStroke, TweenInfo.new(0.18),
-                        { Thickness = big and 2 or 0, Transparency = big and 0.1 or 1 }):Play()
+                -- IMGUI: subtle scale, no glow ring
+                TweenService:Create(thumbScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad,
+                        Enum.EasingDirection.Out), { Scale = big and 1.25 or 1 }):Play()
         end
         hit.MouseEnter:Connect(function() hovering = true;  refreshThumb() end)
         hit.MouseLeave:Connect(function() hovering = false; refreshThumb() end)
@@ -2177,7 +2164,7 @@ end
 function Card:AddDropdown(cfg)
         cfg = cfg or {}
         local W, T = self.Window, self.Window.Theme
-        local r = self:_row(25)
+        local r = self:_row(23)                  -- IMGUI: compact 23px dropdown row
 
         local function opts()
                 local o = cfg.Options
@@ -2191,13 +2178,13 @@ function Card:AddDropdown(cfg)
         local current = cfg.Default
         if current == nil or current == "" then current = opts()[1] end
 
-        local btn = self:_pill(r, cfg.Width or 66)       -- v2.5: 62→66px
-        local txt = inst("TextLabel", { BackgroundTransparency = 1, Font = W.FontMedium,    -- v2.5: medium weight
-                TextColor3 = T.ControlText, TextSize = 8, Text = tostring(current),         -- v2.5: 7→8pt
+        local btn = self:_pill(r, cfg.Width or 62)       -- IMGUI: 62px
+        local txt = inst("TextLabel", { BackgroundTransparency = 1, Font = W.FontMedium,
+                TextColor3 = T.ControlText, TextSize = 7, Text = tostring(current),
                 Size = UDim2.new(1, -14, 1, 0), Position = UDim2.fromOffset(3, 0),
                 TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd }, btn)
         local _, spin = self:_caret(btn)
-        self:_label(r, cfg.Name or "Dropdown", 78)       -- v2.5: 75→78 right gap
+        self:_label(r, cfg.Name or "Dropdown", 74)       -- IMGUI: 74px right gap
         W:_onTheme(function(t) txt.TextColor3 = t.ControlText end)
 
         local setFlag = self:_flag(cfg, function() return current end)
@@ -2233,7 +2220,7 @@ end
 function Card:AddMultiDropdown(cfg)
         cfg = cfg or {}
         local W, T = self.Window, self.Window.Theme
-        local r = self:_row(27)                  -- v2.5: 25→27px
+        local r = self:_row(25)                  -- IMGUI: compact 25px multi row
 
         local options = {}
         do
@@ -2249,13 +2236,13 @@ function Card:AddMultiDropdown(cfg)
                 if state[tostring(o)] ~= nil then state[tostring(o)] = true end
         end
 
-        local btn = self:_pill(r, cfg.Width or 66)       -- v2.5: 62→66px
-        local txt = inst("TextLabel", { BackgroundTransparency = 1, Font = W.FontMedium,    -- v2.5: medium weight
-                TextColor3 = T.ControlText, TextSize = 8, Text = "",                        -- v2.5: 7→8pt
+        local btn = self:_pill(r, cfg.Width or 62)       -- IMGUI: 62px
+        local txt = inst("TextLabel", { BackgroundTransparency = 1, Font = W.FontMedium,
+                TextColor3 = T.ControlText, TextSize = 7, Text = "",
                 Size = UDim2.new(1, -14, 1, 0), Position = UDim2.fromOffset(3, 0),
                 TextXAlignment = Enum.TextXAlignment.Center, TextTruncate = Enum.TextTruncate.AtEnd }, btn)
         local _, spin = self:_caret(btn)
-        self:_label(r, cfg.Name or "Multi", 78)          -- v2.5: 75→78 right gap
+        self:_label(r, cfg.Name or "Multi", 74)          -- IMGUI: 74px right gap
 
         local setFlag = self:_flag(cfg, function() return state end)
         local function selected()
@@ -2315,12 +2302,12 @@ function Card:AddInput(cfg)
         local isNum = (cfg.Type == "number" or cfg.Numeric == true)
         local minV, maxV = cfg.Min or 0, cfg.Max or 100
         local unit = cfg.Suffix or ""
-        local r = self:_row(27)                  -- v2.5: 25→27px
+        local r = self:_row(25)                  -- IMGUI: compact 25px input row
 
         local holder = inst("Frame", { BackgroundColor3 = T.Control, AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(cfg.Width or 66, 16),  -- v2.5: 62→66w, 14→16h
+                Position = UDim2.new(1, -6, 0.5, 0), Size = UDim2.fromOffset(cfg.Width or 62, 15),
                 ClipsDescendants = true }, r)
-        inst("UICorner", { CornerRadius = UDim.new(0, 4) }, holder)            -- v2.5: 3→4 radius
+        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, holder)            -- IMGUI: 3px radius
         local stroke = inst("UIStroke", { Color = T.ControlBorder, Thickness = 1,
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, holder)
         local underline = inst("Frame", { BackgroundColor3 = W.Accent, BorderSizePixel = 0,
