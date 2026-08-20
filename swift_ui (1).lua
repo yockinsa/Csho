@@ -1295,9 +1295,10 @@ end
 
 function Window:_backdropFor()
         self:CloseOverlays()
-        -- IMGUI: invisible click-catcher, no visible overlay or dimming
+        -- No visible backdrop at all — just a transparent click-catcher
         self._backdrop = inst("TextButton", { Name = "swift_backdrop", Text = "",
                 BackgroundTransparency = 1, AutoButtonColor = false, Size = UDim2.fromScale(1, 1),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
                 ZIndex = 7 }, self.ScreenGui)
         self._backdrop.Activated:Connect(function() self:CloseOverlays() end)
         return self._backdrop
@@ -1311,17 +1312,9 @@ function Window:_menuPanel(button, rowCount, onClosed)
         local w = math.max(70 * S, button.AbsoluteSize.X)   -- IMGUI: 70px min width
         local h = rowCount * ROW_H + PAD * 2
 
-        -- IMGUI: tight, subtle shadow behind dropdown
-        local shadow = inst("ImageLabel", { Name = "swift_overlay_shadow", BackgroundTransparency = 1, ZIndex = 8,
-                Image = "rbxassetid://1316045217", ScaleType = Enum.ScaleType.Slice,
-                SliceCenter = Rect.new(10, 10, 118, 118),
-                ImageColor3 = Color3.fromRGB(0, 0, 0), ImageTransparency = 0.65,
-                Size = UDim2.fromOffset(w + 8, 0), AnchorPoint = Vector2.new(0, 0),
-                Position = UDim2.fromOffset(left - 4, top - 4) }, self.ScreenGui)
-
         local d = inst("Frame", { Name = "swift_overlay", BackgroundColor3 = T.DropdownBg, ZIndex = 9,
                 Size = UDim2.fromOffset(w, h), BorderSizePixel = 0, ClipsDescendants = true }, self.ScreenGui)
-        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, d)            -- IMGUI: tight 3px radius
+        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, d)
         inst("UIStroke", { Color = T.DropdownBorder, Thickness = 1,
                 ApplyStrokeMode = Enum.ApplyStrokeMode.Border }, d)
         local list = inst("Frame", { BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1) }, d)
@@ -1330,23 +1323,27 @@ function Window:_menuPanel(button, rowCount, onClosed)
         inst("UIListLayout", { Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder }, list)
 
         local br, bs = button.AbsolutePosition, button.AbsoluteSize
-        local gap  = 4 * S                               -- v2.5: 3→4px gap from the pill
+        local gap  = 4 * S
         local left = math.clamp(br.X + bs.X - w, 8, math.max(8, vp.X - w - 8))
         local below = br.Y + bs.Y + gap
         local flip = (below + h > vp.Y - 8)
         local top  = flip and math.max(8, br.Y - h - gap) or below
         d.Position = UDim2.fromOffset(left, top)
-        if shadow then shadow.Position = UDim2.fromOffset(left - 4, top - 4) end
+
+        -- Shadow created AFTER position is known
+        local shadow = inst("ImageLabel", { Name = "swift_overlay_shadow", BackgroundTransparency = 1, ZIndex = 8,
+                Image = "rbxassetid://1316045217", ScaleType = Enum.ScaleType.Slice,
+                SliceCenter = Rect.new(10, 10, 118, 118),
+                ImageColor3 = Color3.fromRGB(0, 0, 0), ImageTransparency = 0.6,
+                Size = UDim2.fromOffset(w + 8, h + 8), AnchorPoint = Vector2.new(0, 0),
+                Position = UDim2.fromOffset(left - 4, top - 4) }, self.ScreenGui)
 
         d.Size = UDim2.fromOffset(w, 0)
-        shadow.Size = UDim2.fromOffset(w + 8, 0)
         TweenService:Create(d, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
                 { Size = UDim2.fromOffset(w, h) }):Play()
-        TweenService:Create(shadow, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
-                { Size = UDim2.fromOffset(w + 8, h + 8) }):Play()
         if flip then
                 d.Position = UDim2.fromOffset(left, br.Y - gap)
-                if shadow then shadow.Position = UDim2.fromOffset(left - 4, br.Y - gap - 4) end
+                shadow.Position = UDim2.fromOffset(left - 4, br.Y - gap - 4)
                 TweenService:Create(d, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
                         { Position = UDim2.fromOffset(left, top) }):Play()
                 TweenService:Create(shadow, TweenInfo.new(0.14, Enum.EasingStyle.Quint, Enum.EasingDirection.Out),
@@ -1975,17 +1972,19 @@ function Card:AddToggle(cfg)
         local r = self:_row(24)                  -- IMGUI: compact 24px row
         local state = cfg.Default == true
 
-        -- IMGUI-style checkbox: flat, minimal, no gradient/sheen
-        local boxSize = 13
+        -- Checkbox with original gradient
+        local boxSize = 14
         local box = inst("Frame", {
-                BackgroundColor3 = state and W.Accent or T.ToggleOff,
+                BackgroundColor3 = WHITE,  -- WHITE base: UIGradient multiplies with this
                 AnchorPoint = Vector2.new(1, 0.5),
                 Position = UDim2.new(1, -6, 0.5, 0),
                 Size = UDim2.fromOffset(boxSize, boxSize),
-                BorderSizePixel = 1,
-                BorderColor3 = state and W.Accent or T.ControlBorder,
+                BorderSizePixel = 0,
         }, r)
-        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, box)  -- IMGUI: subtle 2px radius
+        inst("UICorner", { CornerRadius = UDim.new(0, 3) }, box)
+        local grad = inst("UIGradient", { Rotation = 135,
+                Color = state and ColorSequence.new(T.AccentDark, W.Accent)
+                              or ColorSequence.new(T.ToggleOff, T.ToggleOff) }, box)
         local check = inst("ImageLabel", { BackgroundTransparency = 1, Size = UDim2.fromOffset(8, 8),
                 Image = resolveIcon("lucide-check"), ImageColor3 = WHITE, ScaleType = Enum.ScaleType.Fit,
                 AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
@@ -1995,8 +1994,8 @@ function Card:AddToggle(cfg)
 
         local setFlag = self:_flag(cfg, function() return state end)
         local function paint()
-                box.BackgroundColor3 = state and W.Accent or W.Theme.ToggleOff
-                box.BorderColor3 = state and W.Accent or W.Theme.ControlBorder
+                grad.Color = state and ColorSequence.new(W.Theme.AccentDark, W.Accent)
+                                   or ColorSequence.new(W.Theme.ToggleOff, W.Theme.ToggleOff)
         end
         W:_onAccent(paint)
         W:_onTheme(paint)
@@ -2049,20 +2048,22 @@ function Card:AddSlider(cfg)
         -- IMGUI: track positioned for compact layout
         local track = inst("Frame", { BackgroundColor3 = T.TrackEmpty, Position = UDim2.fromOffset(7, 20),
                 Size = UDim2.new(1, -14, 0, 3) }, r)
-        inst("UICorner", { CornerRadius = UDim.new(0, 1) }, track)  -- IMGUI: 1px radius
-        local fill = inst("Frame", { BackgroundColor3 = W.Accent, Size = UDim2.fromScale(0, 1) }, track)
-        inst("UICorner", { CornerRadius = UDim.new(0, 1) }, fill)
-        -- IMGUI: smaller, solid thumb, no glow ring
+        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, track)
+        local fill = inst("Frame", { BackgroundColor3 = WHITE, Size = UDim2.fromScale(0, 1) }, track)
+        inst("UICorner", { CornerRadius = UDim.new(0, 2) }, fill)
+        local fillGrad = inst("UIGradient", {
+                Color = ColorSequence.new(T.AccentDark, W.Accent) }, fill)
+        -- Circular thumb
         local thumb = inst("Frame", { BackgroundColor3 = T.Thumb, AnchorPoint = Vector2.new(0.5, 0.5),
-                Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(6, 6) }, track)
+                Position = UDim2.fromScale(0, 0.5), Size = UDim2.fromOffset(8, 8) }, track)
         inst("UICorner", { CornerRadius = UDim.new(0.5, 0) }, thumb)
         local thumbScale = inst("UIScale", { Scale = 1 }, thumb)
 
-        W:_onAccent(function(c) fill.BackgroundColor3 = c end)
+        W:_onAccent(function(c) fillGrad.Color = ColorSequence.new(W.Theme.AccentDark, c) end)
         W:_onTheme(function(t)
                 nameLbl.TextColor3 = t.RangeLabel; out.TextColor3 = t.RangeValue
                 track.BackgroundColor3 = t.TrackEmpty; thumb.BackgroundColor3 = t.Thumb
-                fill.BackgroundColor3 = W.Accent
+                fillGrad.Color = ColorSequence.new(t.AccentDark, W.Accent)
         end)
 
         local setFlag = self:_flag(cfg, function() return value end)
